@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "realtime-openai-chat"
+version = "0.1.0"
+description = "A Flask application for real-time chat with OpenAI's API"
+authors = ["Your Name <you@example.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+flask = "3.0.2"
+flask-socketio = "5.3.6"
+python-socketio = "5.11.1"
+websockets = "12.0"
+python-dotenv = "1.0.1"
+gunicorn = "^21.2.0"
+eventlet = "^0.35.2"
+fastapi = "*"
+uvicorn = "*"
+twilio = "*"
+python-multipart = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
