@@ -1,6 +1,6 @@
 run =  ["gunicorn", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:5000", "main:app"]
 entrypoint = "main.py"
-modules = ["python-3.11", "postgresql-16"]
+modules = ["python-3.11"]
 
 hidden = [".pythonlibs"]
 
