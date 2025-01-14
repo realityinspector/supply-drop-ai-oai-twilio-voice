@@ -60,7 +60,7 @@ VOICE = 'shimmer'
 LOG_EVENT_TYPES = [
     'response.content.done', 'rate_limits.updated', 'response.done',
     'input_audio_buffer.committed', 'input_audio_buffer.speech_stopped',
-    'input_audio_buffer.speech_started', 'session.created'
+    'input_audio_buffer.speech_started', 'session.created', 'turn.start', 'turn.end'
 ]
 
 app = FastAPI()
@@ -80,10 +80,10 @@ async def handle_incoming_call(request: Request):
     """Handle incoming call and return TwiML response to connect to Media Stream."""
     response = VoiceResponse()
     response.say(
-        "Please take a deep breath while we prepare Indie to synchronize with you between the human and digital realms. We'll start in 3, 2, 1...",
+        "Hello. Welcome to the Supply Drop Resource Assistance Line. I can help you find Wildfire relief resources in Southern California and Hurricane Recovery Resources in Western North Carolina. How can I help?",
         voice="Polly.Matthew")
     response.pause(length=1)
-    response.say("go!", voice="Polly.Matthew")
+    response.say("How can I help?", voice="Polly.Matthew")
     host = request.url.hostname
     connect = Connect()
     connect.stream(url=f'wss://{host}/media-stream')
@@ -96,6 +96,7 @@ async def handle_media_stream(websocket: WebSocket):
     """Handle WebSocket connections between Twilio and OpenAI."""
     logger = None
     stream_sid = None
+    current_turn_id = None
 
     print("Client connected")
     await websocket.accept()
@@ -142,7 +143,7 @@ async def handle_media_stream(websocket: WebSocket):
 
         async def send_to_twilio():
             """Receive events from the OpenAI Realtime API, send audio back to Twilio."""
-            nonlocal stream_sid, logger
+            nonlocal stream_sid, logger, current_turn_id
             try:
                 async for openai_message in openai_ws:
                     response = json.loads(openai_message)
@@ -153,11 +154,24 @@ async def handle_media_stream(websocket: WebSocket):
                             logger.debug(
                                 f"Full event payload: {json.dumps(response)}")
 
-                        if response['type'] == 'session.updated':
-                            logger.info("Session updated successfully")
-                            logger.debug(
-                                f"Session update payload: {json.dumps(response)}"
-                            )
+                    # Handle turn detection events
+                    if response['type'] == 'turn.start':
+                        new_turn_id = response.get('turn', {}).get('id')
+                        if current_turn_id and current_turn_id != new_turn_id:
+                            # Cancel previous turn's response
+                            await openai_ws.send(json.dumps({
+                                "type": "response.cancel",
+                                "turn_id": current_turn_id
+                            }))
+                            if logger:
+                                logger.info(f"Cancelled response for turn {current_turn_id}")
+                        current_turn_id = new_turn_id
+                        if logger:
+                            logger.info(f"New turn started: {current_turn_id}")
+
+                    if response['type'] == 'turn.end':
+                        if logger:
+                            logger.info(f"Turn ended: {response.get('turn', {}).get('id')}")
 
                     if response[
                             'type'] == 'response.audio.delta' and response.get(
@@ -196,7 +210,12 @@ async def send_session_update(openai_ws):
         "type": "session.update",
         "session": {
             "turn_detection": {
-                "type": "server_vad"
+                "type": "server_vad",
+                "mode": "normal",
+                "time_units": {
+                    "speech_gap_ms": 600,
+                    "speech_timeout_ms": 6000
+                }
             },
             "input_audio_format": "g711_ulaw",
             "output_audio_format": "g711_ulaw",
