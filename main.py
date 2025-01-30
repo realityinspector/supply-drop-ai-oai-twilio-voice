@@ -73,7 +73,7 @@ async def handle_incoming_call(request: Request):
     print("Incoming call received.")
     response = VoiceResponse()
     response.say(
-        "Welcome to the Supply Drop AI help line. This is a demonstration of technology and information may be inaccurate. I can help you find emergency response and relief resources for the LA Wildfires and Hurricane Helene Recovery.",
+        "Welcome to the Supply Drop AI help line. This is a demonstration of technology and information may be inaccurate. I can help you find non-emergency response and relief resources for the LA Wildfires and Hurricane Helene Recovery.  NOT FOR EMERGENCIES. CALL 911 if you are experiencing an emergency.",
         voice="Polly.Joanna")
     response.pause(length=1)
     response.say("How can I help?", voice="Polly.Joanna")
